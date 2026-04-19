@@ -27,7 +27,7 @@ CineFlow is a "Netflix-style" application designed to provide a seamless and vis
 
 ### The Discovery Hub
 *Showcase the hero search, category tabs, and movie grid with glassmorphism hover states.*
-![Home Page Screenshot](./docs/home-screenshot.png)
+![Home Page Screenshot](./docs/hero-banner.png)
 
 ### Cinematic Details
 *Showcase the auto-playing trailer background, movie metadata, and masonry photo gallery.*
