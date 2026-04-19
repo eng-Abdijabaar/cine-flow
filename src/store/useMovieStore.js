@@ -4,17 +4,30 @@ import { persist } from 'zustand/middleware';
 const useMovieStore = create(
   persist(
     (set) => ({
+      // --- Transient State (NOT saved to local storage) ---
       searchQuery: '',
-      favorites: [], // Array of Movie IDs
-      userRatings: {}, // Object: { [movieId]: rating }
+      activeGenre: null, // null means "Trending/All"
 
-      setSearchQuery: (query) => set({ searchQuery: query }),
-      
+      // --- Persistent State (Saved to local storage) ---
+      favorites: [], 
+      userRatings: {}, 
+
+      // --- Actions ---
+      setSearchQuery: (query) => set({ 
+        searchQuery: query, 
+        activeGenre: null // Clearing genre when searching
+      }),
+
+      setActiveGenre: (genreId) => set({ 
+        activeGenre: genreId, 
+        searchQuery: '' // Clearing search when clicking a genre
+      }),
+
       toggleFavorite: (movieId) => set((state) => {
         const isFav = state.favorites.includes(movieId);
         return {
           favorites: isFav 
-            ? state.favorites.filter(id => id !== movieId)
+            ? state.favorites.filter((id) => id !== movieId)
             : [...state.favorites, movieId]
         };
       }),
@@ -24,7 +37,12 @@ const useMovieStore = create(
       })),
     }),
     {
-      name: 'cineflow-storage', // Persist data to localStorage
+      name: 'cineflow-storage', // The key used in browser LocalStorage
+      // ONLY save favorites and userRatings. Forget search queries on refresh.
+      partialize: (state) => ({ 
+        favorites: state.favorites, 
+        userRatings: state.userRatings 
+      }),
     }
   )
 );

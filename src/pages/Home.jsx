@@ -1,28 +1,41 @@
 import { useEffect, useState } from 'react';
-import { Search, Flame, Clapperboard, Rocket } from 'lucide-react';
+import { Search, Flame, Clapperboard, Rocket, TrendingUp } from 'lucide-react';
 import useMovieStore from '../store/useMovieStore';
-import { fetchTrending, searchMovies, getImageUrl } from '../api/tmdb';
+import { fetchTrending, searchMovies, fetchByGenre, getImageUrl } from '../api/tmdb';
 import { Link } from 'react-router-dom';
 
+// Added a "Trending" (null) category to act as the default home state
 const CATEGORIES = [
+  { id: null, name: "Trending", icon: <TrendingUp size={16} /> },
   { id: 28, name: "Action", icon: <Flame size={16} /> },
   { id: 878, name: "Sci-Fi", icon: <Rocket size={16} /> },
   { id: 35, name: "Comedy", icon: <Clapperboard size={16} /> },
-  // Add more genres as needed
 ];
 
 export default function Home() {
-  const { searchQuery, setSearchQuery } = useMovieStore();
+  // Pull our new activeGenre and setActiveGenre from the store
+  const { searchQuery, setSearchQuery, activeGenre, setActiveGenre } = useMovieStore();
   const [movies, setMovies] = useState([]);
 
   useEffect(() => {
     const loadMovies = async () => {
-      const { data } = searchQuery ? await searchMovies(searchQuery) : await fetchTrending();
-      setMovies(data.results);
+      let response;
+      
+      // Logic Tree: Decide which API endpoint to hit
+      if (searchQuery) {
+        response = await searchMovies(searchQuery);
+      } else if (activeGenre) {
+        response = await fetchByGenre(activeGenre);
+      } else {
+        response = await fetchTrending();
+      }
+      
+      setMovies(response.data.results);
     };
+
     const debounce = setTimeout(loadMovies, 500);
     return () => clearTimeout(debounce);
-  }, [searchQuery]);
+  }, [searchQuery, activeGenre]); // <-- Now triggers when EITHER of these change
 
   return (
     <div className="min-h-screen p-6">
@@ -45,12 +58,25 @@ export default function Home() {
 
       {/* Category Tabs */}
       <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide mb-8">
-        {CATEGORIES.map((cat) => (
-          <button key={cat.id} className="flex items-center gap-2 px-6 py-2 rounded-full bg-slate-800 hover:bg-brand-orange hover:text-white transition-all whitespace-nowrap border border-slate-700">
-            {cat.icon}
-            <span>{cat.name}</span>
-          </button>
-        ))}
+        {CATEGORIES.map((cat) => {
+          // Check if this specific tab is the active one
+          const isActive = activeGenre === cat.id;
+
+          return (
+            <button 
+              key={cat.id || 'trending'} 
+              onClick={() => setActiveGenre(cat.id)}
+              className={`flex items-center gap-2 px-6 py-2 rounded-full transition-all whitespace-nowrap border ${
+                isActive 
+                  ? 'bg-brand-orange text-white border-brand-orange shadow-lg shadow-brand-orange/20' 
+                  : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:text-white'
+              }`}
+            >
+              {cat.icon}
+              <span>{cat.name}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Movie Grid */}
@@ -59,10 +85,11 @@ export default function Home() {
           <Link to={`/movie/${movie.id}`} key={movie.id} className="group relative rounded-xl overflow-hidden shadow-lg cursor-pointer transform hover:scale-105 transition-transform duration-300">
             <img src={getImageUrl(movie.poster_path)} alt={movie.title} className="w-full h-full object-cover" />
             
-            {/* Glassmorphism Overlay */}
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4 backdrop-blur-sm">
-              <h3 className="text-lg font-bold text-white">{movie.title}</h3>
-              <p className="text-brand-orange text-sm">{movie.release_date?.split('-')[0]}</p>
+              <h3 className="text-lg font-bold text-white leading-tight">{movie.title}</h3>
+              <p className="text-brand-orange text-sm font-medium mt-1">
+                {movie.release_date?.split('-')[0]}
+              </p>
             </div>
           </Link>
         ))}
